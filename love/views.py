@@ -1,26 +1,44 @@
-from django.http import HttpResponseBadRequest, HttpResponseRedirect, Http404
+from django.db import models
+from django.http import HttpResponseBadRequest, HttpResponseRedirect, Http404, HttpResponseNotAllowed
 from django.contrib.contenttypes.models import ContentType
 from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.http import require_POST
 
 from love.models import Love
+from love.forms import ToggleLoveForm
 
 
-class LoveBadRequest(HttpResponseBadRequest):
-	pass
-
-
-def toggle_love(request, content_type_pk=None, object_pk=None):
+@csrf_protect
+@require_POST
+def toggle_love(request, next=None):
+	"""
+	Toggle love.
 	
-	next = None if 'next' not in request.GET else request.GET['next']
+	"""
 	
-	if content_type_pk == None or object_pk == None:
-		return LoveBadRequest
+	data = request.POST.copy()
+    
+	next = data.get("next", next)
+	content_type = data.get("content_type")
+	object_pk = data.get("object_pk")
 	
-	content_type = ContentType.objects.get(pk=content_type_pk)
-	obj = get_object_or_404(content_type.model_class(), pk=object_pk)
+	if content_type == None or object_pk == None:
+		return LoveBadRequest("No object specified.")
+		
+	try:
+		model = models.get_model(*content_type.split(".", 1))
+		target = model.objects.get(pk=object_pk)
+	except:
+		return LoveBadRequest("An error occured trying to get the target object.")
+	
+	form = ToggleLoveForm(target, data=data)
+	
+	if form.security_errors():
+		return LoveBadRequest("Form failed security verification:" % escape(str(form.security_errors())))
 	
 	# first filter on the object itself
-	filters = {'content_type': content_type, 'object_pk': object_pk}
+	filters = form.get_filter_kwargs()
 	
 	# either add a user or a session key to our list of filters
 	if request.user.is_authenticated():
@@ -41,8 +59,8 @@ def toggle_love(request, content_type_pk=None, object_pk=None):
 		return HttpResponseRedirect(next)
 	
 	# if not, redirect to the original object's permalink
-	if obj.get_absolute_url is not None:
-		return HttpResponseRedirect(obj.get_absolute_url())
+	if target.get_absolute_url is not None:
+		return HttpResponseRedirect(target.get_absolute_url())
 	
 	# faling both of those, return a 404
-	raise Http404('next not passed to view in querystring and get_absolute_url not defined on object')
+	raise Http404('next not passed to view and get_absolute_url not defined on object')

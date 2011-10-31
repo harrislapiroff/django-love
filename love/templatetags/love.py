@@ -5,22 +5,23 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.sessions.backends.db import SessionStore
+
 from love.models import Love
+from love.forms import ToggleLoveForm
 
 register = template.Library()
 
 @register.simple_tag
-def love_url(obj):
+def love_toggle_form(obj):
 	"""
-	Renders a URL for toggling Love on an object.
+	Renders a form for toggling Love on an object.
 	
 	Syntax::
 	
-		{% love_url <object_instance> %}
+		{% love_toggle_form <object_instance> %}
 	
 	"""
-	content_type = ContentType.objects.get_for_model(obj)
-	return reverse('love.views.toggle_love', args=(content_type.pk, obj.pk))
+	return ToggleLoveForm(obj)
 
 @register.simple_tag
 def love_count(obj):
