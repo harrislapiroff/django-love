@@ -13,5 +13,8 @@ class Love(models.Model):
 	session_key = models.TextField(max_length=255, null=True, blank=True)
 	added_date = models.DateTimeField(auto_now_add=True)
 	
+	def __unicode__(self):
+		return self.content_object.__unicode__()
+	
 	class Meta:
 		unique_together = ('content_type', 'object_pk', 'user', 'session_key')
