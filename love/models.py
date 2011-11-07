@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.contenttypes import generic
 from django.contrib.contenttypes.models import ContentType
+from generic_aggregation import generic_annotate
 
 class Love(models.Model):
 	"A user or session owned indication of love for some object. Either user or session should be present to indicate the owner."
@@ -19,13 +20,19 @@ class Love(models.Model):
 		unique_together = ('content_type', 'object_pk', 'user', 'session_key')
 
 
-class LovableMixin(object):
-	"Provides convenience methods for objects we know to be lovable. The lovable mixin is *not* required for adding love to objects."
+class LovableManager(models.Manager):
+	"Extends the standard model manager to include an order_by_love method."
+	def order_by_love(self, desc=True):
+		"Returns a queryset ordered by the love count on an object."
+		qs = self.get_query_set()
+		return generic_annotate(qs, Love.content_object, models.Count('id'))
+
+
+class Lovable(models.Model):
+	"Abstract model class that provides a convenience API for objects we know to be lovable. The lovable mixin is *not* required for adding love to objects, it just provides shortcuts."
 	
-	def get_love_queryset(self):
-		content_type = ContentType.objects.get_for_model(self)
-		pk = self.pk
-		return Love.objects.filter(content_type=content_type, object_pk=pk)
+	love = generic.GenericRelation(Love, content_type_field='content_type', object_id_field='object_pk')
+	objects = LovableManager()
 	
-	def get_love_count(self):
-		return self.get_love_queryset().count()
+	class Meta:
+		abstract = True

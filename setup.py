@@ -9,5 +9,5 @@ setup(
 		version='.'.join([str(v) for v in version]),
 		description='A simple generic upvoting system for Django.',
 		packages = find_packages(),
-		install_requires = ['django==1.3.1']
+		install_requires = ['django==1.3.1', 'django-generic-aggregation==0.1.1']
 	)
