@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.contenttypes import generic
 from django.contrib.contenttypes.models import ContentType
-from generic_aggregation import generic_annotate
+from django.db.models import Count
 
 class Love(models.Model):
 	"A user or session owned indication of love for some object. Either user or session should be present to indicate the owner."
@@ -25,7 +25,7 @@ class LovableManager(models.Manager):
 	def order_by_love(self, desc=True):
 		"Returns a queryset ordered by the love count on an object."
 		qs = self.get_query_set()
-		return generic_annotate(qs, Love.content_object, models.Count('id'))
+		return qs.annotate(Count('love'))
 
 
 class Lovable(models.Model):
